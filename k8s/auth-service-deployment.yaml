@@ -1,0 +1,84 @@
+# auth_service Deployment + ClusterIP Service.
+# PostgreSQL is assumed to run OUTSIDE the cluster; the placeholder ExternalName
+# Service "postgres" points at the host running PostgreSQL (edit as required).
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: authz-benchmark
+    component: postgres-external
+spec:
+  type: ExternalName
+  # Placeholder: change to the FQDN/IP of your external PostgreSQL 14+ server.
+  # If you deploy PostgreSQL inside Kind instead, replace this ExternalName
+  # Service with a normal ClusterIP Service (see README.md).
+  externalName: host.docker.internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  labels:
+    app: authz-benchmark
+    component: auth-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: authz-benchmark
+      component: auth-service
+  template:
+    metadata:
+      labels:
+        app: authz-benchmark
+        component: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: authz-benchmark/auth-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: authz-config
+            - secretRef:
+                name: authz-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  labels:
+    app: authz-benchmark
+    component: auth-service
+spec:
+  type: ClusterIP
+  selector:
+    app: authz-benchmark
+    component: auth-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
