@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+
+# Load .env file from project root before reading config (override shell exports)
+load_dotenv(Path(__file__).parent.parent.parent / ".env", override=True)
 
 from .config import get_settings
 from .middleware import AuthMiddleware

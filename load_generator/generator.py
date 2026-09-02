@@ -5,7 +5,7 @@ requests against the gateway, measures end-to-end latency and the gateway's
 T_auth_overhead (X-Auth-Overhead-Ns), and writes a CSV report plus P50/P99
 auth-overhead statistics.
 
-Environment variables:
+Environment variables (loaded from .env file):
     BASE_URL            Gateway base URL (e.g. http://localhost:8000)
     TOTAL_REQUESTS      Number of requests to send (default 1000)
     CONCURRENCY         Concurrent workers (default 20)
@@ -27,9 +27,14 @@ import statistics
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 import jwt
+from dotenv import load_dotenv
+
+# Load .env file from project root before reading config (override shell exports)
+load_dotenv(Path(__file__).parent.parent / ".env", override=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("load_generator")
@@ -303,7 +308,7 @@ async def run() -> int:
 
     csv_path = f"results_{cfg.auth_mode}_{cfg.concurrency}.csv"
     write_csv(csv_path, results)
-    # print_stats(results)
+    print_stats(results)
     return 0
 
 
